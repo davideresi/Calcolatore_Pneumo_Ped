@@ -468,6 +468,17 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                     else:
                         st.warning("⚠️ PPSV23 rilevato ma impossibile calcolare l'intervallo per la nuova dose di PCV20")
 
+            # PCV13 + PCV20 (nessuna PPSV23)
+            elif "PCV13" in tipo_dosi and "PCV20" in tipo_dosi and "PPSV23" not in tipo_dosi:
+                eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
+                if len(eta_pcv20) >= 2 and any(e >= 12 for e in eta_pcv20):
+                    st.success("✅ 2 dosi di PCV20 già eseguite (almeno una dopo i 12 mesi)")
+                    st.info("ℹ️ La dose precedente di PCV13 non modifica la schedula")
+                    st.info("✅ Nessuna ulteriore dose raccomandata.")
+                else:
+                    st.warning("⚠️ Dosi di PCV20 eseguite troppo precocemente")
+                    st.info("💉 Somministrare 1 dose di PCV20 dopo i 12 mesi (se mancante) oppure PPSV23 se il ciclo è completo")
+
             # SOLO PPSV23 (nessuna dose PCV)
             elif all(v == "PPSV23" for v in tipo_dosi):
                 st.warning("⚠️ PPSV23 già eseguito ma nessuna dose di PCV rilevata")
@@ -477,6 +488,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             else:
                 st.warning("⚠️ Combinazione di dosi non riconosciuta.")
                 st.info("Verificare le date e i tipi di vaccino inseriti.")
+
 
 
 
