@@ -354,7 +354,8 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.success("✅ ≥3 dosi di PCV20 (almeno una dopo i 12 mesi)")
                         st.info("Nessuna ulteriore dose raccomandata.")
                     else:
-                        st.success("✅ ≥3 dosi di PCV20 (tutte prima dei import streamlit as st
+                        st.success("✅ ≥3 dosi di PCV20 (tutte prima dei 12 mesi)")
+import streamlit as st
 from datetime import datetime, timedelta
 from fpdf import FPDF
 import io
