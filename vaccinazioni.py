@@ -771,7 +771,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             for i, v in enumerate(tipo_dosi):
                 if v == "PPSV23" and eta_dosi[i] < 24:
                     st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida.")
-                    st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane dal PCV e comunque dopo i 24 mesi di età.")
+                    st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane da un eventuale precedente PCV20 e comunque dopo i 24 mesi di età.")
 
             ha_ppsv23 = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
@@ -791,7 +791,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.success("✅ PCV20 + PPSV23 già eseguiti")
                         st.info("Nessuna ulteriore dose raccomandata.")
                 else:
-                    st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
+                    st.success("✅ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
                     if not ha_ppsv23:
                         st.info("💉 Somministrare 1 dose di PCV20 + PPSV23 a distanza di almeno 8 settimane")
                     else:
@@ -833,7 +833,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.success("✅ PCV20 + PPSV23 già eseguiti")
                         st.info("Nessuna ulteriore dose raccomandata.")
                 else:
-                    st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
+                    st.success("✅ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
                     if not ha_ppsv23:
                         st.info("💉 Somministrare 1 dose di PCV20 + PPSV23 a distanza di almeno 8 settimane")
                     else:
