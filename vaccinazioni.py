@@ -392,7 +392,14 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.info("Nessuna ulteriore dose raccomandata.")
                 else:
                     st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
-                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 a distanza di almeno 8 settimane")
+                    if not ha_ppsv23:
+                        st.info("💉 Somministrare 1 dose di PCV20 + PPSV23 a distanza di almeno 8 settimane")
+                    else:
+                        eta_ppsv23 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PPSV23"]
+                        if eta_ppsv23:
+                            st.info(f"💉 Somministrare 1 dose aggiuntiva di PCV20 dopo almeno 12 mesi da PPSV23 → dopo i {eta_ppsv23[0] + 12} mesi")
+                        else:
+                            st.warning("⚠️ PPSV23 rilevato ma impossibile calcolare l'intervallo per la nuova dose di PCV20")
 
             # SOLO PCV15
             elif all(v == "PCV15" for v in tipo_dosi):
@@ -428,7 +435,14 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.info("Nessuna ulteriore dose raccomandata.")
                 else:
                     st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
-                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 a distanza di almeno 8 settimane")
+                    if not ha_ppsv23:
+                        st.info("💉 Somministrare 1 dose di PCV20 + PPSV23 a distanza di almeno 8 settimane")
+                    else:
+                        eta_ppsv23 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PPSV23"]
+                        if eta_ppsv23:
+                            st.info(f"💉 Somministrare 1 dose aggiuntiva di PCV20 dopo almeno 12 mesi da PPSV23 → dopo i {eta_ppsv23[0] + 12} mesi")
+                        else:
+                            st.warning("⚠️ PPSV23 rilevato ma impossibile calcolare l'intervallo per la nuova dose di PCV20")
 
             # PCV15 + PPSV23 ma MANCANTE PCV20
             elif "PCV15" in tipo_dosi and "PPSV23" in tipo_dosi and "PCV20" not in tipo_dosi:
@@ -448,6 +462,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             else:
                 st.warning("⚠️ Combinazione di dosi non riconosciuta.")
                 st.info("Verificare le date e i tipi di vaccino inseriti.")
+
 
 
      
