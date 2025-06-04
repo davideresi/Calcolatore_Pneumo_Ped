@@ -1,0 +1,456 @@
+import streamlit as st
+from datetime import datetime, timedelta
+from fpdf import FPDF
+import io
+
+def calcola_eta_mesi(data_nascita):
+    """Restituisce l'età attuale in mesi"""
+    oggi = datetime.today().date()
+    return (oggi.year - data_nascita.year) * 12 + (oggi.month - data_nascita.month)
+
+def calcola_eta_alla_dose(data_nascita, data_dose):
+    """Restituisce l'età in mesi al momento della dose"""
+    return (data_dose.year - data_nascita.year) * 12 + (data_dose.month - data_nascita.month)
+
+def calcola_eta(data_nascita):
+    oggi = datetime.today()
+    anni = oggi.year - data_nascita.year
+    mesi = oggi.month - data_nascita.month
+    if oggi.day < data_nascita.day:
+        mesi -= 1
+    eta_mesi = anni * 12 + mesi
+    return eta_mesi
+
+def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
+
+    st.subheader("📅 Calendario raccomandato:")
+   
+
+    if ha_vaccinazioni == "No":
+        if categoria == "In buona salute":
+            if eta_mesi < 7:
+                st.success("✅ PCV15 – 3 dosi a partire da 2 mesi (con intervalli di 4-8 settimane)")
+                eta_target = 2
+                oggi = datetime.today()
+                data_prox = data_nascita + timedelta(weeks=eta_target*4)
+                st.write(f"📌 Prossima data utile per la somministrazione: {data_prox.strftime('%d/%m/%Y')}")
+            elif 7 <= eta_mesi < 12:
+                st.success("✅ PCV15 – 3 dosi a distanza di 8 settimane una dall'altra")
+            elif 12 <= eta_mesi < 24:
+                st.success("✅ PCV15 – 2 dosi a distanza di 8 settimane una dall'altra")
+            elif eta_mesi >= 24:
+                st.success("✅ PCV20 – 1 dose unica")
+        elif categoria == "Con patologia a rischio":
+            if eta_mesi < 7:
+                st.success("✅ PCV20 – 4 dosi: 3 dosi a partire da 2 mesi (intervalli 4-8 settimane) + 1 dose a 10-15 mesi")
+                st.info("➕ 1 dose di PPSV23 raccomandata dopo il compimento dei 24 mesi")
+                eta_target = 2
+                oggi = datetime.today()
+                data_prox = data_nascita + timedelta(weeks=eta_target*4)
+                data_prox = max(data_prox, oggi.date())
+                st.write(f"📌 Prossima data utile per la somministrazione: {data_prox.strftime('%d/%m/%Y')}")
+            elif 7 <= eta_mesi < 12:
+                st.success("✅ Nessuna dose precedente")
+                st.info("➕ Avviare ciclo con 3 dosi di PCV20: 2 a distanza di 4-8 settimane + 1 dose a 10-15 mesi (4-8 settimane dopo la precedente)")
+                st.info("➕ 1 dose di PPSV23 raccomandata dopo i 24 mesi")
+            elif 12 <= eta_mesi < 24:
+                st.success("✅ PCV20 – 2 dosi a distanza di 8 settimane + PPSV23 dopo i 24 mesi di età")
+            elif eta_mesi >= 24:
+                st.success("✅ PCV20 – 1 dose + PPSV23 a distanza di almeno 8 settimane")
+        
+        
+    # --- Bambini con dosi precedenti ---
+    if ha_vaccinazioni == "Sì" and dosi_precedenti:
+        for i, dose in enumerate(dosi_precedenti, start=1):
+            data = dose["data"]
+            vaccino = dose["vaccino"]
+            eta_dose = dose["eta_mesi"]
+
+            if vaccino == "PCV13" and data > datetime(2023, 12, 31).date():
+                st.warning(f"⚠️ Dose {i}: PCV13 non più in commercio al momento della somministrazione ({data.strftime('%d/%m/%Y')}). Verificare la correttezza dell'inserimento.")
+
+            if vaccino == "PPSV23" and eta_dose < 24:
+                st.warning(f"⚠️ Dose {i}: PPSV23 somministrato prima dei 24 mesi. La dose potrebbe essere non valida e va rivalutata.")
+    # --- Bambini con eta_mesi < 7 ---
+        if categoria == "In buona salute" and eta_mesi < 7:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+
+            if all(v == "PCV15" for v in tipo_dosi):
+                if n_dosi == 1:
+                    st.success("✅ PCV15 – 1 dose già eseguita")
+                    st.info("Completare con altre 2 dosi: una a partire da 4 mesi e una a 10 mesi.")
+                elif n_dosi == 2:
+                    st.success("✅ PCV15 – 2 dosi già eseguite")
+                    st.info("Completare con la 3ª dose a 10 mesi (minimo 4 settimane dalla precedente).")
+                elif n_dosi >= 3:
+                    st.success("✅ PCV15 – 3 dosi già eseguite")
+                    st.warning("PCV15: ciclo completo. Nessuna ulteriore dose prevista.")
+
+            elif all(v == "PCV20" for v in tipo_dosi):
+                if n_dosi == 1:
+                    st.success("✅ PCV20 – 1 dose già eseguita")
+                    st.info("Completare con 3 dosi: 2 a distanza di 4-8 settimane e la 4ª tra 10-15 mesi.")
+                elif n_dosi == 2:
+                    st.success("✅ PCV20 – 2 dosi già eseguite")
+                    st.info("Completare con 2 dosi: una dopo almeno 4 settimane, l’altra tra 10-15 mesi.")
+                elif n_dosi == 3:
+                    st.success("✅ PCV20 – 3 dosi già eseguite")
+                    st.info("Completare con la 4ª dose tra i 10-15 mesi di età (minimo 4 settimane dalla precedente).")
+                elif n_dosi >= 4:
+                    st.success("✅ PCV20 – 4 dosi già eseguite")
+                    st.warning("⚠️ Verifica: la 4ª dose dovrebbe essere tra i 10-15 mesi di età. Se somministrata prima, considerare richiamo.")
+            else:
+                st.warning("⚠️ Le dosi somministrate non sono omogenee (PCV15/PCV20). Si raccomanda di consultare il centro vaccinale.")
+
+        elif categoria == "Con patologia a rischio" and eta_mesi < 7:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+
+            
+            if n_dosi == 1:
+                    st.success("✅ PCV – 1 dose già eseguita")
+                    st.info("Completare con altre 3 dosi di PCV20: due nei primi mesi, una a 10-15 mesi. Aggiungere PPSV23 dopo i 24 mesi.")
+            elif n_dosi == 2:
+                    st.success("✅ PCV – 2 dosi già eseguite")
+                    st.info("Completare con 2 dosi di PCV20: una nei primi mesi, una a 10-15 mesi. PPSV23 dopo 24 mesi.")
+            elif n_dosi == 3:
+                    st.success("✅ PCV – 3 dosi già eseguite")
+                    st.info("Completare con 1 dose di PCV20 tra i 10-15 mesi. PPSV23 dopo 24 mesi.")
+            elif n_dosi >= 4:
+                    st.success("✅ PCV – 4 dosi già eseguite")
+                    st.warning("⚠️ Verificare età al momento delle dosi e considerare PPSV23 dopo 24 mesi.")
+
+            
+            else:
+                st.warning("⚠️ Dosi miste o anomale (es. PCV15 e PCV20): verificare inserimento. PPSV23 solo dopo i 24 mesi.")
+
+    # --- Bambini con eta_mesi 7-11 ---
+        elif categoria == "In buona salute" and 7 <= eta_mesi < 12:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+           
+            if all(v == "PCV15" for v in tipo_dosi):
+                if n_dosi == 1:
+                    st.success("✅ PCV15 – 1 dose già eseguita")
+                    st.info("Completare con 2 dosi di PCV15 a distanza di almeno 8 settimane dall'ultima dose eseguita e fra le dosi")
+                elif n_dosi == 2:
+                        st.success("✅ PCV15 – 2 dosi già eseguite")
+                        st.warning("Completare con 1 dose di PCV15 a distanza di almeno 8 settimane dall'ultima dose eseguita.")
+                elif n_dosi == 3:
+                        st.success("✅ PCV15 – 3 dosi già eseguite")
+                        st.warning("Ciclo considerato completo. Nessuna ulteriore dose prevista.")
+                else:
+                        st.warning("⚠️ Sono state registrate più di 3 dosi di PCV15. Verificare la correttezza dell'inserimento.")
+
+            elif all(v == "PCV20" for v in tipo_dosi):
+                if n_dosi == 1:
+                        st.success("✅ PCV20 – 1 dose già eseguita")
+                        st.info("Completare con 2 dosi: ad una distanza di 4-8 settimane dallp'ultima e fra le dosi.")
+                elif n_dosi == 2:
+                        st.success("✅ PCV20 – 2 dosi già eseguite")
+                        st.info("Completare con 1 dose a distanza di 4-8 settimane dall'ultima, tra i 10-15 mesi.")
+                elif n_dosi == 3:
+                        st.success("✅ PCV20 – 3 dosi già eseguite")
+                        st.warning("Verificare: la 4ª dose va eseguita tra i 10-15 mesi.")
+                elif n_dosi >= 4:
+                        st.success("✅ PCV20 – 4 dosi già eseguite")
+                        st.warning("⚠️ Verifica: la 4ª dose dovrebbe essere tra i 10-15 mesi di età. Se somministrata prima, considerare richiamo.")
+
+                else:
+                        st.warning("⚠️ Le dosi somministrate non sono omogenee (PCV15/PCV20). Consultare il centro vaccinale.")
+
+            else:
+                st.warning("⚠️ Le dosi somministrate non sono omogenee (PCV15/PCV20). Si raccomanda di consultare il centro vaccinale.")
+
+       
+        elif categoria == "Con patologia a rischio" and 7 <= eta_mesi < 12:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+
+            if n_dosi == 1:
+                st.success("✅ 1 dose di PCV già eseguita")
+                st.info("➕ Completare con 2 dosi: 1 dose a distanza di almeno 4-8 settimane, poi richiamo tra 10-15 mesi")
+
+            elif n_dosi == 2:
+                if all(e < 7 for e in eta_dosi):
+                    st.success("✅ 2 dosi di PCV già eseguite (entrambe <7 mesi)")
+                    st.info("➕ Completare con 2 dosi: 1 dose a distanza di almeno 4-8 settimane, poi richiamo tra 10-15 mesi")
+                else:
+                    st.success("✅ 2 dosi di PCV già eseguite (almeno una ≥7 mesi)")
+                    st.info("➕ Completare con 1 dose tra 10-15 mesi a distanza di almeno 4 settimane")
+
+            elif n_dosi == 3:
+                if all(v == "PCV15" for v in tipo_dosi):
+                    st.success("✅ 3 dosi di PCV15 già eseguite")
+                    st.info("➕ Somministrare 1 dose di PCV20 tra i 10-15 mesi, a distanza di almeno 8 settimane dall'ultima dose")
+                elif all(v == "PCV20" for v in tipo_dosi):
+                    st.success("✅ 3 dosi di PCV20 già eseguite")
+                    st.info("➕ Ciclo primario completo. Raccomandata 1 dose di PPSV23 dopo i 24 mesi")
+                else:
+                    st.warning("⚠️ Le dosi somministrate non sono omogenee (PCV15/PCV20). Si raccomanda di consultare il centro vaccinale.")
+            else:
+                    st.warning("⚠️ Le dosi somministrate non sono omogenee (PCV15/PCV20). Si raccomanda di consultare il centro vaccinale.")
+
+
+
+
+ # --- Bambini con eta_mesi 12-23 ---  
+
+        elif categoria == "In buona salute" and 12 <= eta_mesi < 24:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+
+
+            if all(v == "PCV15" for v in tipo_dosi):
+                if n_dosi == 1:
+                    st.success("✅ 1 dose di PCV15 già eseguita")
+                    st.info("Completare con 1 dose di PCV15 a distanza di almeno 8 settimane dalla precedente.")
+                elif n_dosi == 2:
+                    st.success("✅ 2 dosi di PCV15 già eseguite")
+                    st.info("Completare con 1 dose di PCV15 a distanza di almeno 8 settimane dalla precedente.")
+                elif n_dosi >= 3:
+                    st.success("✅ 3 o più dosi di PCV15 già eseguite")
+                    st.info("Nessuna ulteriore dose di PCV15 o PCV20 prevista.")
+
+            if all(v == "PCV20" for v in tipo_dosi):
+                if n_dosi == 1 and eta_dosi[0] < 12:
+                    st.success("✅ PCV20 – 1 dose già eseguita (prima dei 12 mesi)")
+                    st.info("Completare con 2 dosi a distanza di 8 settimane ciascuna.")
+                elif n_dosi == 1 and eta_dosi[0] >= 12:
+                    st.success("✅ PCV20 – 1 dose già eseguita (dopo i 12 mesi)")
+                    st.info("Completare con 1 dose a distanza di almeno 8 settimane.")
+                elif n_dosi == 2:
+                    if eta_dosi[0] < 12 and eta_dosi[1] < 12:
+                        st.success("✅ PCV20 – 2 dosi già eseguite (entrambe prima dei 12 mesi)")
+                        st.info("Completare con 1 dose a distanza di almeno 8 settimane.")
+                    elif eta_dosi[0] >= 12 or eta_dosi[1] >= 12:
+                        st.success("✅ PCV20 – 2 dosi già eseguite (almeno una dopo i 12 mesi)")
+                        st.info("Nessuna ulteriore dose prevista.")
+                else:
+                    st.warning("⚠️ Vaccini misti o non PCV20. Consulta il centro vaccinale per completare il ciclo.")
+        
+        elif categoria == "Con patologia a rischio" and 12 <= eta_mesi < 24:
+            n_dosi = len(dosi_precedenti)
+            dosi_sorted = sorted(dosi_precedenti, key=lambda x: x['data'])
+            tipo_dosi = [d['vaccino'] for d in dosi_sorted]
+            eta_dosi = [d['eta_mesi'] for d in dosi_sorted]
+            ultima_data = dosi_sorted[-1]['data']
+
+            if n_dosi == 1:
+                                  st.success("✅ 1 dose già eseguita")
+                                  st.info("Completare con 2 dosi di PCV20 a distanza di almeno 8 settimane.")
+                                  st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+
+            if n_dosi == 2:
+                if eta_dosi[0] < 12 or eta_dosi[1] < 12:
+                    st.success("✅ 2 dosi già eseguite (almeno una prima dei 12 mesi)")
+                    st.info("Completare con 1 dose di PCV20 a distanza di almeno 8 settimane dall'ultima.")
+                    st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+                elif all(e >= 12 for e in eta_dosi) and not any(v == "PCV20" for v in tipo_dosi):
+                    st.success("✅ 2 dosi già eseguite (entrambe dopo i 12 mesi, ma nessuna con PCV20)")
+                    st.info("Completare con 1 dose di PCV20 a distanza di almeno 8 settimane dall'ultima.")
+                    st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+                elif all(e >= 12 for e in eta_dosi) and any(v == "PCV20" for v in tipo_dosi):
+                    st.success("✅ 2 dosi già eseguite (entrambe dopo i 12 mesi, almeno una con PCV20)")
+                    st.info("Nessuna ulteriore dose prevista.")
+                    st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+
+            elif n_dosi == 3:
+                if not any(v == "PCV20" for v in tipo_dosi):
+                                            st.success("✅ 3 dosi già eseguite (nessuna con PCV20)")
+                                            st.info("Completare con 1 dose di PCV20 a distanza di almeno 8 settimane dall'ultima.")
+                                            st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+                elif any(v == "PCV20" for v in tipo_dosi):
+                                            st.success("✅ 3 dosi già eseguite (almeno una con PCV20)")
+                                            st.info("Nessuna ulteriore dose PCV20 prevista.")
+                                            st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+
+            elif n_dosi > 3:
+                if any(v == "PCV20" for v in tipo_dosi):
+                                            st.success("✅ Più di 3 dosi già eseguite (almeno una con PCV20)")
+                                            st.info("Nessuna ulteriore dose PCV20 prevista.")
+                                            st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+                else:
+                                            st.success("✅ Più di 3 dosi già eseguite (nessuna con PCV20)")
+                                            st.info("Completare con 1 dose di PCV20 a distanza di almeno 8 settimane dall'ultima.")
+                                            st.info("➕ PPSV23 raccomandato dopo i 24 mesi.")
+
+            else:
+                    st.warning("⚠️ Vaccini misti o non PCV20. Consulta il centro vaccinale.")
+
+# --- Bambini con eta_mesi 24-59 ---
+
+        elif categoria == "In buona salute" and 24 <= eta_mesi < 60:
+            n_dosi = len(dosi_precedenti)
+            tipo_dosi = [d["vaccino"] for d in dosi_precedenti]
+            eta_dosi = [d["eta_mesi"] for d in dosi_precedenti]
+
+            if any("PCV15" == v for v in tipo_dosi):
+                        
+                if n_dosi == 1 and tipo_dosi[0] == "PCV15":
+                    if eta_dosi[0] >= 24:
+                       st.success("✅ 1 dose di PCV15 già eseguita dopo i 24 mesi")
+                       st.info("Nessuna ulteriore dose raccomandata.")
+                    else:
+                       st.success("✅ 1 dose di PCV15 già eseguita prima dei 24 mesi")
+                       st.info("Somministrare 1 dose di PCV20 a distanza di almeno 8 settimane.")
+
+                elif n_dosi == 2 and all(v == "PCV15" for v in tipo_dosi):
+                   if all(e < 12 for e in eta_dosi):
+                       st.success("✅ 2 dosi di PCV15 già eseguite (entrambe prima dei 12 mesi)")
+                       st.info("Somministrare 1 dose di PCV20 a distanza di almeno 8 settimane.")
+                   else:
+                       st.success("✅ 2 dosi di PCV15 già eseguite (almeno una dopo i 12 mesi)")
+                       st.info("Nessuna ulteriore dose raccomandata.")
+
+                elif n_dosi >= 3 and all(v == "PCV15" for v in tipo_dosi):
+                       st.success("✅ ≥3 dosi di PCV15 già eseguite")
+                       st.info("Nessuna ulteriore dose raccomandata.")
+
+            elif "PCV20" in tipo_dosi:
+                if n_dosi == 1:
+                    idx = tipo_dosi.index("PCV20")
+                    if eta_dosi[idx] >= 12:
+                        st.success("✅ 1 dose di PCV20 già eseguita (dopo i 12 mesi)")
+                        st.info("Nessuna ulteriore dose raccomandata.")
+                    else:
+                        st.success("✅ 1 dose di PCV20 già eseguita (prima dei 12 mesi)")
+                        st.info("Somministrare 1 dose di PCV20 a distanza di almeno 8 settimane.")
+                elif n_dosi == 2:
+                    eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
+                    if any(e >= 12 for e in eta_pcv20):
+                        st.success("✅ 2 dosi di PCV20 (almeno una dopo i 12 mesi)")
+                        st.info("Nessuna ulteriore dose raccomandata.")
+                    else:
+                        st.success("✅ 2 dosi di PCV20 (entrambe prima dei 12 mesi)")
+                        st.info("Somministrare 1 dose di PCV20 a distanza di almeno 8 settimane.")
+                elif n_dosi >= 3:
+                    eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
+                    if any(e >= 12 for e in eta_pcv20):
+                        st.success("✅ ≥3 dosi di PCV20 (almeno una dopo i 12 mesi)")
+                        st.info("Nessuna ulteriore dose raccomandata.")
+                    else:
+                        st.success("✅ ≥3 dosi di PCV20 (tutte prima dei 12 mesi)")
+                        st.info("Somministrare 1 dose di PCV20 a distanza di almeno 8 settimane.")
+
+            elif any("PCV13" == v for v in tipo_dosi):
+                        st.warning("⚠️ Dose di PCV13 rilevata. Verificare la data di somministrazione.")
+                        st.info("Somministrare 1 dose di PCV20.")
+            else:
+              st.info("ℹ️ Nessuna ulteriore raccomandazione specifica per le condizioni inserite.")
+
+
+
+        elif categoria == "Con patologia a rischio" and 24 <= eta_mesi < 60:
+            n_dosi = len(dosi_precedenti)
+            tipo_dosi = [d["vaccino"] for d in dosi_precedenti]
+            eta_dosi = [d["eta_mesi"] for d in dosi_precedenti]
+            ha_ppsv23 = any(v == "PPSV23" for v in tipo_dosi)
+            ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
+            ha_pcv15 = any(v == "PCV15" for v in tipo_dosi)
+
+            if n_dosi == 1 and tipo_dosi[0] == "PCV15":
+                if eta_dosi[0] >= 24:
+                    st.success("✅ Nessuna dose di PCV20")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+                else:
+                    st.success("✅ Nessuna dose di PCV20")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+
+            elif n_dosi == 2 and all(v == "PCV15" for v in tipo_dosi):
+                if all(e < 12 for e in eta_dosi):
+                    st.success("✅ Nessuna dose di PCV20")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+                else:
+                    st.success("✅ Nessuna dose di PCV20")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+
+            elif n_dosi >= 3 and all(v == "PCV15" for v in tipo_dosi):
+                    st.success("✅ Nessuna dose di PCV20")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+
+            
+            # 1 dose di PCV20
+            elif n_dosi == 1 and tipo_dosi[0] == "PCV20":
+                if eta_dosi[0] < 24:
+                    st.success("✅ 1 dose di PCV20 eseguita prima dei 24 mesi")
+                    st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")  
+                else:
+                    if not ha_ppsv23:
+                        st.success("✅ 1 dose di PCV20 eseguita dopo i 24 mesi")
+                        st.info("➕ Somministrare PPSV23 dopo almeno 8 settimane")
+                    else:
+                        st.success("✅ 1 dose di PCV20 + PPSV23 già eseguiti")
+                        st.info("Nessuna ulteriore dose prevista")
+
+            # 2 dosi di PCV20
+            elif n_dosi == 2 and all(v == "PCV20" for v in tipo_dosi):
+                    if all(e < 12 for e in eta_dosi):
+                        st.success("✅ 2 dosi di PCV20 (entrambe prima dei 12 mesi)")
+                        st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+                    elif any(e >= 12 for e in eta_dosi) and all(e < 24 for e in eta_dosi):
+                        st.success("✅ 2 dosi di PCV20 (almeno una dopo i 12 mesi ma prima dei 24)")
+                        st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+                    elif any(e >= 24 for e in eta_dosi):
+                        if not ha_ppsv23:
+                            st.success("✅ 2 dosi di PCV20 (almeno una dopo i 24 mesi)")
+                            st.info("➕ Somministrare PPSV23 dopo 8 settimane")
+                        else:
+                            st.success("✅ 2 dosi di PCV20 + PPSV23 già eseguiti")
+                            st.info("Nessuna ulteriore dose prevista")
+
+            # 3 o più dosi di PCV20
+            elif n_dosi >= 3 and all(v == "PCV20" for v in tipo_dosi):
+                    if all(e < 12 for e in eta_dosi):
+                        st.success("✅ 3 dosi di PCV20 (tutte prima dei 12 mesi)")
+                        st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")
+                    elif any(e >= 24 for e in eta_dosi):
+                        if not ha_ppsv23:
+                            st.success("✅ 3 dosi di PCV20 (almeno una dopo i 24 mesi)")
+                            st.info("➕ Somministrare PPSV23 dopo almeno 8 settimane")
+                        else:
+                            st.success("✅ 3 dosi di PCV20 + PPSV23 già eseguiti")
+                            st.info("Nessuna ulteriore dose prevista")
+                    elif not ha_ppsv23:
+                            st.success("✅ 3 dosi di PCV20")
+                            st.info("➕ Somministrare PPSV23 dopo almeno 8 settimane")
+                    else:
+                            st.success("✅ 3 dosi di PCV20 + PPSV23 già eseguiti")
+                            st.info("Nessuna ulteriore dose prevista")
+
+            # PPSV23 mancante
+            elif ha_pcv20 and not ha_ppsv23:
+                st.success("✅Nessuna dose di PPSV23")
+                st.info("➕ PPSV23 raccomandato se non ancora eseguito")
+            # PCV20 mancante
+            elif not ha_pcv20 and not ha_ppsv23:
+                st.success("✅Nessuna dose di PCV20")
+                st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 dopo almeno 8 settimane")          
+            elif not ha_pcv20 and ha_ppsv23:
+                st.success("✅Nessuna dose di PCV20")
+                st.info("➕ Somministrare 1 dose di PCV20 a distanza di almeno 12 mesi dalla precedente dose di PPSV23") 
+
+        else:
+                st.warning("⚠️ Combinazione di dosi non riconosciuta. Verificare inserimento o consultare il centro vaccinale.")
+    else:
+        st.info("ℹ️ Nessuna ulteriore raccomandazione specifica per le condizioni inserite.")  
+
+     
+
+
