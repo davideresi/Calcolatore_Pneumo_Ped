@@ -1,3 +1,4 @@
+
 import streamlit as st
 from datetime import datetime, timedelta
 from fpdf import FPDF
@@ -21,10 +22,34 @@ def calcola_eta(data_nascita):
     eta_mesi = anni * 12 + mesi
     return eta_mesi
 
+def controllo_e_rimozione_pcv20_invalidi(dosi_precedenti):
+    """
+    Controlla se una dose di PCV20 è stata somministrata meno di 12 mesi dopo PPSV23.
+    Se trova una o più dosi non valide, le rimuove dalla lista e restituisce un messaggio di errore.
+    """
+    dosi_ordinate = sorted(dosi_precedenti, key=lambda x: x['data'])  # Ordina per data
+    da_rimuovere = []
+    messaggi = []
+    for i, dose in enumerate(dosi_ordinate):
+        if dose['vaccino'] == "PCV20":
+            # Cerca l’ultima PPSV23 precedente
+            for prev in reversed(dosi_ordinate[:i]):
+                if prev['vaccino'] == "PPSV23":
+                    delta_mesi = (dose['data'].year - prev['data'].year) * 12 + (dose['data'].month - prev['data'].month)
+                    if delta_mesi < 12:
+                        da_rimuovere.append(dose)
+                        messaggi.append(
+                            f"❌ La dose di PCV20 del {dose['data'].strftime('%d/%m/%Y')} è stata eseguita meno di 12 mesi dopo PPSV23 del {prev['data'].strftime('%d/%m/%Y')}. "
+                            "La dose è **non valida** e va ripetuta almeno 12 mesi dopo PPSV23."
+                        )
+                    break
+    # Rimuove tutte le dosi PCV20 non valide dalla lista originale
+    dosi_valide = [dose for dose in dosi_precedenti if dose not in da_rimuovere]
+    return dosi_valide, messaggi
+
 def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
 
     st.subheader("📅 Calendario raccomandato:")
-   
 
     if ha_vaccinazioni == "No":
         if categoria == "In buona salute":
@@ -57,10 +82,14 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                 st.success("✅ PCV20 – 2 dosi a distanza di 8 settimane + PPSV23 dopo i 24 mesi di età")
             elif eta_mesi >= 24:
                 st.success("✅ PCV20 – 1 dose + PPSV23 a distanza di almeno 8 settimane")
-        
-        
+
     # --- Bambini con dosi precedenti ---
     if ha_vaccinazioni == "Sì" and dosi_precedenti:
+        # --- CONTROLLO E RIMOZIONE PCV20 NON VALIDI ---
+        dosi_precedenti, messaggi_errore = controllo_e_rimozione_pcv20_invalidi(dosi_precedenti)
+        for messaggio in messaggi_errore:
+            st.error(messaggio)
+
         for i, dose in enumerate(dosi_precedenti, start=1):
             data = dose["data"]
             vaccino = dose["vaccino"]
@@ -71,6 +100,13 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
 
             if vaccino == "PPSV23" and eta_dose < 24:
                 st.warning(f"⚠️ Dose {i}: PPSV23 somministrato prima dei 24 mesi. La dose potrebbe essere non valida e va rivalutata.")
+
+        # Da qui in poi copia TUTTO il resto della tua logica già esistente.
+        # (Qui va incollato il resto della funzione come da tuo file "vaccinazioni (34).py")
+
+
+
+        
     # --- Bambini con eta_mesi < 7 ---
         if categoria == "In buona salute" and eta_mesi < 7:
             n_dosi = len(dosi_precedenti)
