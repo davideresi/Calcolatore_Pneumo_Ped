@@ -374,12 +374,13 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             eta_dosi = [d["eta_mesi"] for d in dosi_precedenti]
 
             # Validità PPSV23: deve essere somministrato ≥24 mesi
-            for i, v in enumerate(tipo_dosi):
-                if v == "PPSV23" and eta_dosi[i] < 24:
+            ppsv23_non_valide = [i for i, v in enumerate(tipo_dosi) if v == "PPSV23" and eta_dosi[i] < 24]
+            if ppsv23_non_valide:
+                for i in ppsv23_non_valide:
                     st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida.")
-                    st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane e dopo i 24 mesi.")
+                st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane e dopo i 24 mesi.")
 
-            ha_ppsv23 = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
+            ha_ppsv23_valida = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
             ha_pcv15 = any(v == "PCV15" for v in tipo_dosi)
 
@@ -390,7 +391,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                 eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
 
                 if any(e >= 24 for e in eta_pcv20):
-                    if not ha_ppsv23:
+                    if not ha_ppsv23_valida:
                         st.success("✅ Almeno una dose di PCV20 dopo i 24 mesi")
                         st.info("➕ Somministrare PPSV23 a distanza di almeno 8 settimane")
                     else:
@@ -398,7 +399,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                         st.info("Nessuna ulteriore dose raccomandata.")
                 else:
                     st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
-                    if not ha_ppsv23:
+                    if not ha_ppsv23_valida:
                         st.info("💉 Somministrare 1 dose di PCV20 + PPSV23 a distanza di almeno 8 settimane")
                     else:
                         eta_ppsv23 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PPSV23"]
@@ -406,6 +407,27 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                             st.info(f"💉 Somministrare 1 dose aggiuntiva di PCV20 dopo almeno 12 mesi da PPSV23 → dopo i {eta_ppsv23[0] + 12} mesi")
                         else:
                             st.warning("⚠️ PPSV23 rilevato ma impossibile calcolare l'intervallo per la nuova dose di PCV20")
+
+            # PCV13 + PCV20 (senza PCV15)
+            elif "PCV13" in tipo_dosi and ha_pcv20 and not ha_pcv15:
+                st.info("ℹ️ La precedente dose di PCV13 non modifica la schedula.")
+                eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
+                if any(e >= 24 for e in eta_pcv20):
+                    if not ha_ppsv23_valida:
+                        st.success("✅ Almeno una dose di PCV20 dopo i 24 mesi")
+                        st.info("➕ Somministrare PPSV23 a distanza di almeno 8 settimane")
+                    else:
+                        st.success("✅ PCV20 + PPSV23 già eseguiti")
+                        st.info("Nessuna ulteriore dose raccomandata.")
+                else:
+                    st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
+                    st.info("💉 Somministrare 1 dose aggiuntiva di PCV20 dopo almeno 12 mesi da PPSV23")
+
+            # Combinazioni non riconosciute
+            else:
+                st.warning("⚠️ Combinazione di dosi non riconosciuta.")
+                st.info("Verificare le date e i tipi di vaccino inseriti.")
+                
             # SOLO PCV15
             elif all(v == "PCV15" for v in tipo_dosi):
                 if n_dosi == 1 and eta_dosi[0] >= 24:
