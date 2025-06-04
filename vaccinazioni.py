@@ -377,7 +377,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
             ha_pcv15 = any(v == "PCV15" for v in tipo_dosi)
 
-            # 👉 GESTIONE CICLO MISTO PCV15 + PCV20
+            # CICLO MISTO PCV15 + PCV20
             if ha_pcv15 and ha_pcv20:
                 st.success("✅ Ciclo misto PCV15 + PCV20 rilevato")
                 st.info("💡 Si applicano le regole di PCV20 + PPSV23")
@@ -394,7 +394,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                     st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
                     st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 a distanza di almeno 8 settimane")
 
-            # 👉 SOLO PCV15
+            # SOLO PCV15
             elif all(v == "PCV15" for v in tipo_dosi):
                 if n_dosi == 1 and eta_dosi[0] >= 24:
                     st.success("✅ 1 dose di PCV15 eseguita dopo i 24 mesi")
@@ -416,7 +416,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                     else:
                         st.info("Nessuna ulteriore dose raccomandata.")
 
-            # 👉 SOLO PCV20
+            # SOLO PCV20
             elif all(v == "PCV20" for v in tipo_dosi):
                 eta_pcv20 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PCV20"]
                 if any(e >= 24 for e in eta_pcv20):
@@ -430,12 +430,21 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                     st.warning("⚠️ Tutte le dosi di PCV20 eseguite prima dei 24 mesi")
                     st.info("Somministrare 1 dose di PCV20 ➕ PPSV23 a distanza di almeno 8 settimane")
 
-            # 👉 SOLO PPSV23 (senza PCV15 o PCV20)
+            # PCV15 + PPSV23 ma MANCANTE PCV20
+            elif "PCV15" in tipo_dosi and "PPSV23" in tipo_dosi and "PCV20" not in tipo_dosi:
+                eta_ppsv23 = [eta_dosi[i] for i, v in enumerate(tipo_dosi) if v == "PPSV23"]
+                if eta_ppsv23:
+                    st.warning("⚠️ PPSV23 già eseguito, ma manca la dose di PCV20")
+                    st.info(f"💉 Somministrare 1 dose di PCV20 a distanza di almeno 12 mesi da PPSV23 → dopo i {eta_ppsv23[0] + 12} mesi di età.")
+                else:
+                    st.warning("⚠️ PPSV23 rilevato, ma impossibile calcolare la distanza temporale")
+
+            # SOLO PPSV23 (nessuna dose PCV)
             elif all(v == "PPSV23" for v in tipo_dosi):
                 st.warning("⚠️ PPSV23 già eseguito ma nessuna dose di PCV rilevata")
                 st.info("➕ Somministrare 1 dose di PCV20 (a distanza di almeno 12 mesi da PPSV23)")
 
-            # 👉 COMBINAZIONE NON GESTITA
+            # CASI NON RICONOSCIUTI
             else:
                 st.warning("⚠️ Combinazione di dosi non riconosciuta.")
                 st.info("Verificare le date e i tipi di vaccino inseriti.")
