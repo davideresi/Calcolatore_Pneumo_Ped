@@ -373,7 +373,12 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             tipo_dosi = [d["vaccino"] for d in dosi_precedenti]
             eta_dosi = [d["eta_mesi"] for d in dosi_precedenti]
 
-            ha_ppsv23 = any(v == "PPSV23" for v in tipo_dosi)
+            # Validità PPSV23: deve essere somministrato ≥24 mesi
+            for i, v in enumerate(tipo_dosi):
+                if v == "PPSV23" and eta_dosi[i] < 24:
+                    st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida. Valutare eventuale ripetizione dopo i 24 mesi.")
+
+            ha_ppsv23 = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
             ha_pcv15 = any(v == "PCV15" for v in tipo_dosi)
 
@@ -488,6 +493,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             else:
                 st.warning("⚠️ Combinazione di dosi non riconosciuta.")
                 st.info("Verificare le date e i tipi di vaccino inseriti.")
+
 
 
 
