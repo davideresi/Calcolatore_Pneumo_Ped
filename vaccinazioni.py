@@ -376,7 +376,8 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             # Validità PPSV23: deve essere somministrato ≥24 mesi
             for i, v in enumerate(tipo_dosi):
                 if v == "PPSV23" and eta_dosi[i] < 24:
-                    st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida. Valutare eventuale ripetizione dopo i 24 mesi.")
+                    st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida.")
+                    st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane e dopo i 24 mesi.")
 
             ha_ppsv23 = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
@@ -405,7 +406,6 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                             st.info(f"💉 Somministrare 1 dose aggiuntiva di PCV20 dopo almeno 12 mesi da PPSV23 → dopo i {eta_ppsv23[0] + 12} mesi")
                         else:
                             st.warning("⚠️ PPSV23 rilevato ma impossibile calcolare l'intervallo per la nuova dose di PCV20")
-
             # SOLO PCV15
             elif all(v == "PCV15" for v in tipo_dosi):
                 if n_dosi == 1 and eta_dosi[0] >= 24:
