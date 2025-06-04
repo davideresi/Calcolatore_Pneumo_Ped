@@ -474,7 +474,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
                 if len(eta_pcv20) >= 2 and any(e >= 12 for e in eta_pcv20):
                     st.success("✅ 2 dosi di PCV20 già eseguite (almeno una dopo i 12 mesi)")
                     st.info("ℹ️ La dose precedente di PCV13 non modifica la schedula")
-                    st.info("✅ Nessuna ulteriore dose raccomandata.")
+                    st.info("➕ Somministrare PPSV23 a distanza di almeno 8 settimane dall'ultima dose di PCV20")
                 else:
                     st.warning("⚠️ Dosi di PCV20 eseguite troppo precocemente")
                     st.info("💉 Somministrare 1 dose di PCV20 dopo i 12 mesi (se mancante) oppure PPSV23 se il ciclo è completo")
@@ -488,6 +488,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             else:
                 st.warning("⚠️ Combinazione di dosi non riconosciuta.")
                 st.info("Verificare le date e i tipi di vaccino inseriti.")
+
 
 
 
