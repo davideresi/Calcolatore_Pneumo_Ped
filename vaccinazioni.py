@@ -100,6 +100,7 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
 
             if vaccino == "PPSV23" and eta_dose < 24:
                 st.warning(f"⚠️ Dose {i}: PPSV23 somministrato prima dei 24 mesi. La dose potrebbe essere non valida e va rivalutata.")
+                st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane dall'eventuale PCV e comunque dopo i 24 mesi di età.")
 
         # Da qui in poi copia TUTTO il resto della tua logica già esistente.
         # (Qui va incollato il resto della funzione come da tuo file "vaccinazioni (34).py")
@@ -462,8 +463,8 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
             if vaccino == "PCV13" and data > datetime(2023, 12, 31).date():
                 st.warning(f"⚠️ Dose {i}: PCV13 non più in commercio al momento della somministrazione ({data.strftime('%d/%m/%Y')}). Verificare la correttezza dell'inserimento.")
 
-            if vaccino == "PPSV23" and eta_dose < 24:
-                st.warning(f"⚠️ Dose {i}: PPSV23 somministrato prima dei 24 mesi. La dose potrebbe essere non valida e va rivalutata.")
+            #if vaccino == "PPSV23" and eta_dose < 24:
+                #st.warning(f"⚠️ Dose {i}: PPSV23 somministrato prima dei 24 mesi. La dose potrebbe essere non valida e va rivalutata.")
     # --- Bambini con eta_mesi < 7 ---
         if categoria == "In buona salute" and eta_mesi < 7:
             n_dosi = len(dosi_precedenti)
@@ -768,9 +769,9 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
 
             # Validità PPSV23: deve essere somministrato ≥24 mesi
             for i, v in enumerate(tipo_dosi):
-                if v == "PPSV23" and eta_dosi[i] < 24:
-                    st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida.")
-                    st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane dal PCV e comunque dopo i 24 mesi di età.")
+                #if v == "PPSV23" and eta_dosi[i] < 24:
+                    #st.warning(f"⚠️ La dose {i+1} di PPSV23 è stata somministrata prima dei 24 mesi ({eta_dosi[i]} mesi). Secondo le raccomandazioni, la dose non è considerata valida.")
+                    #st.info("💉 Ripetere PPSV23 a distanza di almeno 8 settimane dal PCV e comunque dopo i 24 mesi di età.")
 
             ha_ppsv23 = any(v == "PPSV23" and eta_dosi[i] >= 24 for i, v in enumerate(tipo_dosi))
             ha_pcv20 = any(v == "PCV20" for v in tipo_dosi)
