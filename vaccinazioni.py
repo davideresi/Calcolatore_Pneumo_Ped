@@ -677,3 +677,22 @@ def main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti):
      
 
 
+
+
+
+
+
+
+
+     
+
+
+
+
+
+
+
+
+     
+
+
