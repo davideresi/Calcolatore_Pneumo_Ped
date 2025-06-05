@@ -82,7 +82,7 @@ st.markdown("---")
 st.markdown("""
 💉 _Applicazione per uso educativo e informativo ad uso di personale adeguatamente formato._
 
-🛠️ **Sviluppata da Davide Resi** | 📅 Versione: Giugno 2025
+ **Sviluppata da Davide Resi** | 📅 Versione: Giugno 2025
 
  ** Biblio Prevenar20 RCP, vaxneuvance RCP, calendario-vaccinale-RER, Referto Vax-consilium - Schema vaccinazioni pneumococciche pediatriche, tutte in vigore al momento del rilascio della versione**
 """)
