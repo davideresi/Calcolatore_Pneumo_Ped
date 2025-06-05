@@ -80,9 +80,9 @@ main(data_nascita, eta_mesi, categoria, ha_vaccinazioni, dosi_precedenti)
 # ✅ CREDITI IN CALCE
 st.markdown("---")
 st.markdown("""
-💉 _Applicazione per uso educativo e informativo._
+💉 _Applicazione per uso educativo e informativo ad uso di personale adeguatamente formato._
 
 🛠️ **Sviluppata da Davide Resi** | 📅 Versione: Giugno 2025
 
-📋 ** Biblio Prevenar20 RCP, vaxneuvance RCP, calendario-vaccinale-RER, Referto Vax-consilium - Schema vaccinazioni pneumococciche pediatriche, tutte in vigore al momento del rilascio della versione**
+ ** Biblio Prevenar20 RCP, vaxneuvance RCP, calendario-vaccinale-RER, Referto Vax-consilium - Schema vaccinazioni pneumococciche pediatriche, tutte in vigore al momento del rilascio della versione**
 """)
