@@ -32,7 +32,7 @@ if ha_vaccinazioni == "Sì":
 
         oggi = datetime.today().date()
         data_limite_pcv20 = datetime.strptime("2024-01-01", "%Y-%m-%d").date()
-        eta_minima_valida = data_nascita + timedelta(weeks=6)
+        eta_minima_valida = data_nascita + timedelta(days=60)
 
 
 
@@ -48,7 +48,7 @@ if ha_vaccinazioni == "Sì":
         if data_dose < data_nascita:
             st.error(f"⚠️ La dose {i} è precedente alla data di nascita ({data_dose.strftime('%d/%m/%Y')}).")
         if data_dose < eta_minima_valida:
-            st.warning(f"⚠️ La dose {i} è stata somministrata prima delle 6 settimane di vita ({data_dose.strftime('%d/%m/%Y')}).")
+            st.warning(f"⚠️ La dose {i} è stata somministrata prima dei 60 giorni di vita ({data_dose.strftime('%d/%m/%Y')}).")
         if tipo_vaccino == "PCV20" and data_dose < data_limite_pcv20:
             st.warning(f"⚠️ La dose {i} è con PCV20 prima dell'immissione in commercio (01/01/2024). Verificare.")
 # Controllo PPSV23 prima dei 24 mesi (2 anni)
